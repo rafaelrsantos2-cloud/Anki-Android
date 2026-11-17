@@ -181,7 +181,51 @@ class PreviewerFragment :
         binding.webviewContainer.setFrameStyle()
 
         bindingMap = BindingMap(sharedPrefs(), PreviewerAction.entries, this)
+        setupRafaelSwipeGesture()
     }
+
+    // region AnkiDroid Rafael: deslizar o dedo para os lados alterna pergunta/resposta (e troca de card)
+
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun setupRafaelSwipeGesture() {
+        val group: android.view.ViewGroup = binding.webViewLayout
+        val webView = group.getChildAt(0) ?: return
+        val minDistance = 80 * resources.displayMetrics.density
+        val detector =
+            android.view.GestureDetector(
+                requireContext(),
+                object : android.view.GestureDetector.SimpleOnGestureListener() {
+                    override fun onFling(
+                        e1: android.view.MotionEvent?,
+                        e2: android.view.MotionEvent,
+                        velocityX: Float,
+                        velocityY: Float,
+                    ): Boolean {
+                        e1 ?: return false
+                        val dx = e2.x - e1.x
+                        val dy = e2.y - e1.y
+                        if (kotlin.math.abs(dx) < minDistance || kotlin.math.abs(dx) < 2 * kotlin.math.abs(dy)) return false
+                        if (dx < 0) {
+                            binding.nextButton.performClickIfEnabled()
+                        } else {
+                            binding.previousButton.performClickIfEnabled()
+                        }
+                        return true
+                    }
+                },
+            )
+        webView.setOnTouchListener { _, event ->
+            if (event.pointerCount == 1) detector.onTouchEvent(event)
+            false
+        }
+    }
+
+    override fun onWebViewRecreated(webView: android.webkit.WebView) {
+        super.onWebViewRecreated(webView)
+        setupRafaelSwipeGesture()
+    }
+
+    // endregion
 
     private fun updateSliderGestureExclusion(slider: Slider) {
         ViewCompat.setSystemGestureExclusionRects(
