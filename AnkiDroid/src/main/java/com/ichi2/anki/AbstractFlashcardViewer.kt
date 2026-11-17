@@ -1053,6 +1053,30 @@ abstract class AbstractFlashcardViewer :
                 answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
                 // os botoes ocupam so o meio da coluna (4 x 76dp), ao alcance do polegar
                 answerArea.gravity = android.view.Gravity.CENTER_VERTICAL
+                // botao de desfazer (voltar ao card anterior) no topo do bloco de botoes
+                val densidade = resources.displayMetrics.density
+                val botaoVoltar =
+                    android.widget.ImageView(this).apply {
+                        setImageResource(R.drawable.ic_undo_white)
+                        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                        setBackgroundColor(
+                            com.google.android.material.color.MaterialColors
+                                .getColor(this@AbstractFlashcardViewer, R.attr.showAnswerColor, 0),
+                        )
+                        contentDescription = "Desfazer"
+                        val margem = (3 * densidade).toInt()
+                        setPadding(margem, margem, margem, margem)
+                        setOnClickListener { executeCommand(ViewerCommand.UNDO) }
+                    }
+                val paramsVoltar =
+                    LinearLayout
+                        .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (56 * densidade).toInt())
+                        .apply { bottomMargin = (6 * densidade).toInt() }
+                answerArea.addView(
+                    botaoVoltar,
+                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
+                    paramsVoltar,
+                )
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
                     LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
