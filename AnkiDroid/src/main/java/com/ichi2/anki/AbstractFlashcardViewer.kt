@@ -1051,8 +1051,13 @@ abstract class AbstractFlashcardViewer :
                 answerAreaParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
                 answerAreaParams.width = (30 * resources.displayMetrics.density).toInt()
                 answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+                // os botoes ocupam so a parte de baixo da coluna (4 x 76dp), ao alcance do polegar
+                answerArea.gravity = android.view.Gravity.BOTTOM
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
-                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+                    LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        (304 * resources.displayMetrics.density).toInt(),
+                    )
                 findViewById<LinearLayout>(R.id.ease_buttons).orientation = LinearLayout.VERTICAL
                 for (id in intArrayOf(
                     R.id.flashcard_layout_ease1,
