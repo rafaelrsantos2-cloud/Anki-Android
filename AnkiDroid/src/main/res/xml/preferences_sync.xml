@@ -23,6 +23,14 @@
         android:key="@string/automatic_sync_choice_key"
         android:summary="@string/automatic_sync_choice_summ"
         android:title="@string/automatic_sync_choice" />
+    <ListPreference
+        android:defaultValue="10"
+        android:dependency="@string/automatic_sync_choice_key"
+        android:entries="@array/rafael_auto_sync_interval_entries"
+        android:entryValues="@array/rafael_auto_sync_interval_values"
+        android:key="rafaelAutoSyncInterval"
+        android:title="Intervalo da sincroniza&#231;&#227;o autom&#225;tica"
+        app:useSimpleSummaryProvider="true"/>
     <SwitchPreferenceCompat
         android:defaultValue="true"
         android:key="@string/sync_status_badge_key"

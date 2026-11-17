@@ -65,6 +65,7 @@ import androidx.fragment.app.commitNow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.work.WorkInfo
@@ -1598,10 +1599,12 @@ open class DeckPicker :
         }
 
         fun syncIntervalPassed(): Boolean =
-            (TimeManager.time.intTimeMS() - Prefs.lastSyncTime) > AUTOMATIC_SYNC_MINIMAL_INTERVAL.inWholeMilliseconds
+            (TimeManager.time.intTimeMS() - Prefs.lastSyncTime) > rafaelAutoSyncIntervalMs() &&
+                (TimeManager.time.intTimeMS() - rafaelLastAutoSyncStartMs) > 180_000L
 
         when {
             !Prefs.isAutoSyncEnabled -> Timber.d("autoSync: not enabled")
+            rafaelAutoSyncIntervalMs() == 0L -> Timber.d("autoSync: intervalo = nao sincronizar")
             MeteredSyncPolicy.shouldBlock() -> Timber.d("autoSync: blocked by metered connection")
             !NetworkUtils.isOnline -> Timber.d("autoSync: offline")
             !runInBackground && !syncIntervalPassed() -> Timber.d("autoSync: interval not passed")
@@ -1627,6 +1630,7 @@ open class DeckPicker :
                         SyncWorker.start(this, auth, shouldFetchMedia())
                     } else {
                         Timber.i("autoSync: starting foreground")
+                        rafaelLastAutoSyncStartMs = TimeManager.time.intTimeMS()
                         sync()
                     }
                     return true
@@ -1635,6 +1639,43 @@ open class DeckPicker :
         }
         return false
     }
+
+    // region AnkiDroid Rafael: sincronizacao automatica periodica (10/15/20/30 min) na lista de baralhos
+
+    private var rafaelLastAutoSyncStartMs = 0L
+    private var rafaelAutoSyncLoopStarted = false
+
+    private fun rafaelAutoSyncIntervalMs(): Long {
+        val minutos =
+            androidx.preference.PreferenceManager
+                .getDefaultSharedPreferences(this)
+                .getString("rafaelAutoSyncInterval", null)
+                ?.toLongOrNull() ?: AUTOMATIC_SYNC_MINIMAL_INTERVAL.inWholeMinutes
+        return minutos * 60_000L
+    }
+
+    /** Enquanto a lista de baralhos estiver na tela, verifica a cada minuto se o intervalo ja passou */
+    private fun startRafaelPeriodicAutoSync() {
+        if (rafaelAutoSyncLoopStarted) return
+        rafaelAutoSyncLoopStarted = true
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                while (true) {
+                    kotlinx.coroutines.delay(15_000L)
+                    try {
+                        automaticSync()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.w(e, "autoSync periodico falhou")
+                    }
+                    kotlinx.coroutines.delay(45_000L)
+                }
+            }
+        }
+    }
+
+    // endregion
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!Prefs.devBottomNavEnabled || fragmented || event.action != KeyEvent.ACTION_DOWN || !event.isAltPressed) {
@@ -1830,6 +1871,7 @@ open class DeckPicker :
             if (!automaticSync()) {
                 BackupPromptDialog.showIfAvailable(this@DeckPicker)
             }
+            startRafaelPeriodicAutoSync()
         }
     }
 

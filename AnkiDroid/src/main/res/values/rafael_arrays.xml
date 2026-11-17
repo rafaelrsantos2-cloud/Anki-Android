@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AnkiDroid Rafael: intervalo da sincronizacao automatica -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string-array name="rafael_auto_sync_interval_entries" translatable="false">
+        <item>N&#227;o sincronizar</item>
+        <item>10 min</item>
+        <item>15 min</item>
+        <item>20 min</item>
+        <item>30 min</item>
+    </string-array>
+    <string-array name="rafael_auto_sync_interval_values" translatable="false">
+        <item>0</item>
+        <item>10</item>
+        <item>15</item>
+        <item>20</item>
+        <item>30</item>
+    </string-array>
+</resources>
