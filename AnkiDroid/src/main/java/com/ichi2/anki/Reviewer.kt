@@ -811,6 +811,14 @@ open class Reviewer :
                 Timber.i("Reviewer:: Tag button pressed")
                 showTagsDialog()
             }
+            R.id.action_rafael_toggle_answer_buttons -> {
+                // AnkiDroid Rafael: alterna a barra de respostas entre cima e baixo
+                val chave = getString(R.string.answer_buttons_position_preference)
+                val novaPosicao = if (sharedPrefs().getString(chave, "bottom") == "top") "bottom" else "top"
+                Timber.i("Reviewer:: barra de respostas -> %s", novaPosicao)
+                sharedPrefs().edit().putString(chave, novaPosicao).apply()
+                recreate()
+            }
             R.id.action_corrigir_card -> {
                 Timber.i("Reviewer:: Corrigir card button pressed")
                 showCorrigirCardDialog()
