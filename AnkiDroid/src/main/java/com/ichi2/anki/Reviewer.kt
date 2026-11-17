@@ -1484,7 +1484,9 @@ open class Reviewer :
         if (shouldShowNextReviewTime()) {
             val state = queueState!!
             launchCatchingTask {
-                val labels = withCol { sched.describeNextStates(state.states) }
+                val labels =
+                    withCol { sched.describeNextStates(state.states) }
+                        .let { l -> if (answerButtonsPosition == "right") l.map { tempoCompacto(it) } else l }
                 easeButton1!!.nextTime = labels[0]
                 easeButton2!!.nextTime = labels[1]
                 easeButton3!!.nextTime = labels[2]
@@ -1496,14 +1498,30 @@ open class Reviewer :
     /** AnkiDroid Rafael: com a barra na direita, os botoes mostram so os numeros 1 a 4 */
     private fun aplicarNumerosNaBarraDireita() {
         val eases = intArrayOf(R.id.ease1, R.id.ease2, R.id.ease3, R.id.ease4)
-        val tempos = intArrayOf(R.id.nextTime1, R.id.nextTime2, R.id.nextTime3, R.id.nextTime4)
         for (i in eases.indices) {
             findViewById<TextView>(eases[i]).apply {
                 text = (i + 1).toString()
-                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 22f)
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20f)
             }
-            findViewById<View>(tempos[i]).visibility = View.GONE
         }
+    }
+
+    /** AnkiDroid Rafael: "<10min(s)" -> "<10 min", "8dia(s)" -> "8 d", "2mes(es)" -> "2 m", "1ano(s)" -> "1 a" */
+    private fun tempoCompacto(rotulo: String): String {
+        val m = Regex("""^\s*([<>]?)\s*([\d.,]+)\s*(\p{L}+)""").find(rotulo) ?: return rotulo
+        val (sinal, numero, unidade) = m.destructured
+        val u = unidade.lowercase()
+        val curta =
+            when {
+                u.startsWith("s") -> "s"
+                u.startsWith("min") -> "min"
+                u.startsWith("h") -> "h"
+                u.startsWith("d") -> "d"
+                u.startsWith("m") -> "m"
+                u.startsWith("a") || u.startsWith("y") -> "a"
+                else -> return rotulo
+            }
+        return "$sinal$numero $curta"
     }
 
     override fun automaticShowQuestion(action: AutomaticAnswerAction) {
