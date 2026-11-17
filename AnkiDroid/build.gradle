@@ -171,6 +171,7 @@ android {
             versionNameSuffix "-debug"
             debuggable true
             applicationIdSuffix ".debug"
+            resValue "string", "app_name", "AnkiDroid Rafael"
             splits.abi.universalApk = true // Build universal APK for debug always
             // Check Crash Reports page on developer wiki for info on ACRA testing
             // buildConfigField "String", "ACRA_URL", '"https://918f7f55-f238-436c-b34f-c8b5f1331fe5-bluemix.cloudant.com/acra-ankidroid/_design/acra-storage/_update/report"'
