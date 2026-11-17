@@ -170,17 +170,10 @@ open class AnkiDroidJsAPI(
                 versionSupplied == versionCurrent -> {
                     true
                 }
-                versionSupplied.isLowerThan(versionCurrent) -> {
-                    activity.runOnUiThread {
-                        activity.showSnackbar(context.getString(R.string.update_js_api_version, apiDevContact))
-                    }
-                    versionSupplied.isHigherThanOrEquivalentTo(Version.parse(AnkiDroidJsAPIConstants.MINIMUM_JS_API_VERSION))
-                }
+                // AnkiDroid Rafael: qualquer versao informada pelo card e aceita, sem aviso
                 else -> {
-                    activity.runOnUiThread {
-                        activity.showSnackbar(context.getString(R.string.valid_js_api_version, apiDevContact))
-                    }
-                    false
+                    Timber.i("JS API: versao %s aceita (atual %s)", versionSupplied, versionCurrent)
+                    true
                 }
             }
         } catch (e: Exception) {
