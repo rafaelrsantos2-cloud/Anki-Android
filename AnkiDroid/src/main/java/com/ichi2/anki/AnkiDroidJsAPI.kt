@@ -367,7 +367,26 @@ open class AnkiDroidJsAPI(
 
                 "ttsStop" -> convertToByteArray(apiContract, talker.stop())
                 "searchCard" -> {
-                    with(activity) { navigate(BrowserDestination.Search(query = apiParams, allDecks = false)) }
+                    // AnkiDroid Rafael: link "cid:N" abre o card no visualizador; o voltar retorna ao card em revisao
+                    val cidsPedidos =
+                        Regex("""^\s*cid:(\d+(?:,\d+)*)\s*$""")
+                            .find(apiParams)
+                            ?.groupValues
+                            ?.get(1)
+                    val cids = cidsPedidos?.let { lista -> withCol { findCards("cid:$lista") } }
+                    if (!cids.isNullOrEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            activity.startActivity(
+                                com.ichi2.anki.previewer.PreviewerFragment.getIntent(
+                                    activity,
+                                    com.ichi2.anki.browser.IdsFile(activity.cacheDir, cids),
+                                    0,
+                                ),
+                            )
+                        }
+                    } else {
+                        with(activity) { navigate(BrowserDestination.Search(query = apiParams, allDecks = false)) }
+                    }
                     convertToByteArray(apiContract, true)
                 }
 

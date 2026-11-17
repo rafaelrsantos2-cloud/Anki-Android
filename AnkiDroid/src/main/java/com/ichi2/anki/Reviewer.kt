@@ -145,9 +145,11 @@ import com.ichi2.utils.ViewGroupUtils.setRenderWorkaround
 import com.ichi2.utils.cancelable
 import com.ichi2.utils.dp
 import com.ichi2.utils.iconAlpha
+import com.ichi2.utils.input
 import com.ichi2.utils.increaseHorizontalPaddingOfOverflowMenuIcons
 import com.ichi2.utils.message
 import com.ichi2.utils.negativeButton
+import com.ichi2.utils.neutralButton
 import com.ichi2.utils.positiveButton
 import com.ichi2.utils.show
 import com.ichi2.utils.tintOverflowMenuIcons
@@ -808,6 +810,10 @@ open class Reviewer :
             R.id.action_tag -> {
                 Timber.i("Reviewer:: Tag button pressed")
                 showTagsDialog()
+            }
+            R.id.action_corrigir_card -> {
+                Timber.i("Reviewer:: Corrigir card button pressed")
+                showCorrigirCardDialog()
             }
             R.id.action_edit -> {
                 Timber.i("Reviewer:: Edit note button pressed")
@@ -1835,6 +1841,113 @@ open class Reviewer :
         loadUrlInViewer("javascript: userAction($number);")
     }
 
+    // region AnkiDroid Rafael: "Corrigir este card" (bandeira 7 + campo Correcao)
+
+    private fun showCorrigirCardDialog() {
+        val card = currentCard ?: return
+        launchCatchingTask {
+            val note = withCol { getNote(card.nid) }
+            if (CAMPO_CORRECAO in note) {
+                showCorrigirInputDialog(card, note.getItem(CAMPO_CORRECAO))
+                return@launchCatchingTask
+            }
+            val nomeTipo = withCol { notetypes.get(note.noteTypeId)?.name } ?: ""
+            AlertDialog.Builder(this@Reviewer).show {
+                title(text = "Corrigir este card")
+                message(
+                    text =
+                        "O tipo de nota \"$nomeTipo\" ainda n\u00e3o tem o campo \"$CAMPO_CORRECAO\". Criar agora?\n\n" +
+                            "A pr\u00f3xima sincroniza\u00e7\u00e3o ser\u00e1 completa (envio da cole\u00e7\u00e3o inteira): " +
+                            "sincronize o PC e este app antes de criar.",
+                )
+                positiveButton(text = "Criar campo") { criarCampoCorrecao(card) }
+                neutralButton(text = "S\u00f3 a bandeira") { marcarBandeiraCorrecao(card, Flag.PURPLE) }
+                negativeButton(R.string.dialog_cancel)
+            }
+        }
+    }
+
+    private fun criarCampoCorrecao(card: Card) {
+        launchCatchingTask {
+            withProgress {
+                withCol {
+                    val notetype = notetypes.get(getNote(card.nid).noteTypeId)!!
+                    modSchema(check = false)
+                    notetypes.addFieldModChanged(notetype, notetypes.newField(CAMPO_CORRECAO))
+                }
+            }
+            showCorrigirInputDialog(card, "")
+        }
+    }
+
+    private fun showCorrigirInputDialog(
+        card: Card,
+        htmlAtual: String,
+    ) {
+        val textoAtual =
+            androidx.core.text.HtmlCompat
+                .fromHtml(htmlAtual, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+                .toString()
+                .trim()
+        AlertDialog
+            .Builder(this)
+            .show {
+                title(text = "Corrigir este card")
+                positiveButton(text = "Salvar")
+                negativeButton(R.string.dialog_cancel)
+                if (textoAtual.isNotEmpty() || card.flag == Flag.PURPLE) {
+                    neutralButton(text = "Desmarcar") { salvarCorrecao(card, "", Flag.NONE) }
+                }
+                setView(R.layout.dialog_generic_text_input)
+            }.input(
+                hint = "O que est\u00e1 errado?",
+                inputType =
+                    android.text.InputType.TYPE_CLASS_TEXT or
+                        android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                        android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES,
+                prefill = textoAtual,
+                allowEmpty = true,
+                displayKeyboard = true,
+            ) { dialog, text ->
+                dialog.dismiss()
+                salvarCorrecao(card, text.toString().trim(), Flag.PURPLE)
+            }
+    }
+
+    private fun salvarCorrecao(
+        card: Card,
+        texto: String,
+        flag: Flag,
+    ) {
+        launchCatchingTask {
+            val html = android.text.TextUtils.htmlEncode(texto).replace("\n", "<br>")
+            undoableOp(this@Reviewer) {
+                val note = getNote(card.nid)
+                note.setItem(CAMPO_CORRECAO, html)
+                updateNote(note)
+            }
+            marcarBandeiraCorrecao(card, flag)
+            showSnackbar(
+                if (flag == Flag.PURPLE) "Card marcado para corre\u00e7\u00e3o" else "Marca\u00e7\u00e3o de corre\u00e7\u00e3o removida",
+                Snackbar.LENGTH_SHORT,
+            )
+        }
+    }
+
+    private fun marcarBandeiraCorrecao(
+        card: Card,
+        flag: Flag,
+    ) {
+        val atual = currentCard
+        if (atual != null && atual.id == card.id) {
+            onFlag(atual, flag)
+        } else {
+            launchCatchingTask { undoableOp(this@Reviewer) { setUserFlagForCards(listOf(card.id), flag) } }
+        }
+    }
+
+    // endregion
+
     private fun toggleFlag(flag: Flag) {
         if (currentCard!!.flag == flag) {
             Timber.i("Toggle flag: unsetting flag")
@@ -2217,3 +2330,6 @@ private fun ViewGroup.touchBoundsOf(button: View): Rect {
     if (bounds.bottom >= height - paddingBottom) bounds.bottom = height
     return bounds
 }
+
+/** AnkiDroid Rafael: campo da nota onde fica a anotacao do que corrigir */
+private const val CAMPO_CORRECAO = "Corre\u00e7\u00e3o"
