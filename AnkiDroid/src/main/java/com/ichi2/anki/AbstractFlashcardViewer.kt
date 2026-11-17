@@ -1047,7 +1047,7 @@ abstract class AbstractFlashcardViewer :
                 touchLayerContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
                 answerAreaParams.addRule(RelativeLayout.ALIGN_PARENT_END)
                 answerAreaParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
-                answerAreaParams.width = (92 * resources.displayMetrics.density).toInt()
+                answerAreaParams.width = (84 * resources.displayMetrics.density).toInt()
                 answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
                     LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -1062,7 +1062,46 @@ abstract class AbstractFlashcardViewer :
                         LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
                 }
                 findViewById<View>(R.id.flashcard_layout_flip).layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
-            }
+                // textos menores e centralizados, para caberem na coluna estreita
+                val margemLateral = (2 * resources.displayMetrics.density).toInt()
+                for (id in intArrayOf(
+                    R.id.flashcard_layout_ease1,
+                    R.id.flashcard_layout_ease2,
+                    R.id.flashcard_layout_ease3,
+                    R.id.flashcard_layout_ease4,
+                )) {
+                    findViewById<LinearLayout>(id).apply {
+                        gravity = android.view.Gravity.CENTER
+                        setPadding(margemLateral, paddingTop, margemLateral, paddingBottom)
+                    }
+                }
+                for (id in intArrayOf(R.id.ease1, R.id.ease2, R.id.ease3, R.id.ease4)) {
+                    findViewById<android.widget.TextView>(id).apply {
+                        setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
+                        maxLines = 1
+                        gravity = android.view.Gravity.CENTER
+                    }
+                }
+                for (id in intArrayOf(R.id.nextTime1, R.id.nextTime2, R.id.nextTime3, R.id.nextTime4)) {
+                    findViewById<android.widget.TextView>(id).apply {
+                        setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11f)
+                        maxLines = 1
+                        gravity = android.view.Gravity.CENTER
+                    }
+                }
+                (findViewById<ViewGroup>(R.id.flashcard_layout_flip).getChildAt(0) as? android.widget.TextView)?.apply {
+                    layoutParams =
+                        FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            android.view.Gravity.CENTER,
+                        )
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setSingleLine(false)
+                    maxLines = 3
+                    gravity = android.view.Gravity.CENTER
+                    setPadding(margemLateral, paddingTop, margemLateral, paddingBottom)
+                }            }
 
             else -> Timber.w("Unknown answerButtonsPosition: %s", answerButtonsPosition)
         }
