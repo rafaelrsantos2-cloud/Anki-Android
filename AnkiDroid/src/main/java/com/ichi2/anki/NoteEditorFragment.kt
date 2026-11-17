@@ -2056,35 +2056,45 @@ function resultado(){return JSON.stringify({mudou:e.innerHTML!==original,html:e.
             val margem = (10 * resources.displayMetrics.density).toInt()
             val barra = LinearLayout(contexto).apply { orientation = LinearLayout.HORIZONTAL }
 
-            fun botao(
-                rotulo: String,
-                js: String,
-            ) {
-                barra.addView(
-                    android.widget.Button(contexto, null, android.R.attr.borderlessButtonStyle).apply {
-                        text = rotulo
-                        isAllCaps = false
-                        minWidth = 0
-                        minimumWidth = 0
-                        setPadding(margem, 0, margem, 0)
-                        isFocusable = false
-                        setOnClickListener { webView.evaluateJavascript(js, null) }
-                    },
-                )
-            }
-            botao("Negrito", "cmd('bold')")
-            botao("It\u00e1lico", "cmd('italic')")
-            botao("Sublinhado", "cmd('underline')")
-            botao("Tachado", "cmd('strikeThrough')")
-            botao("Lista", "cmd('insertUnorderedList')")
-            botao("Lista 1-2-3", "cmd('insertOrderedList')")
-            botao("Limpar formato", "cmd('removeFormat')")
-            botao("Desfazer", "cmd('undo')")
             val densidade = resources.displayMetrics.density
 
-            // linha de quadradinhos de cor: um toque aplica a cor ao texto selecionado
+            fun rodar(comando: String) {
+                webView.evaluateJavascript(comando, null)
+            }
+
+            fun botaoCompacto(
+                rotulo: String,
+                aoTocar: () -> Unit,
+            ): android.widget.Button =
+                android.widget.Button(contexto, null, android.R.attr.borderlessButtonStyle).apply {
+                    text = rotulo
+                    isAllCaps = false
+                    textSize = 14f
+                    minWidth = 0
+                    minimumWidth = 0
+                    minHeight = 0
+                    minimumHeight = 0
+                    setPadding(margem, margem / 2, margem, margem / 2)
+                    isFocusable = false
+                    setOnClickListener { aoTocar() }
+                }
+
+            // linhas recolhiveis (cores da fonte, cores do grifo, mais opcoes): so uma aberta por vez
+            val recolhiveis = mutableListOf<android.view.View>()
+
+            fun alternar(alvo: android.view.View?) {
+                for (linha in recolhiveis) {
+                    linha.visibility =
+                        if (linha === alvo && linha.visibility != android.view.View.VISIBLE) {
+                            android.view.View.VISIBLE
+                        } else {
+                            android.view.View.GONE
+                        }
+                }
+            }
+
+            // linha de quadradinhos de cor: um toque aplica a cor ao texto selecionado e recolhe a linha
             fun linhaDeCores(
-                titulo: String,
                 comando: String,
                 cores: List<String>,
                 valorSemCor: String?,
@@ -2093,15 +2103,9 @@ function resultado(){return JSON.stringify({mudou:e.innerHTML!==original,html:e.
                     LinearLayout(contexto).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = android.view.Gravity.CENTER_VERTICAL
-                        setPadding(margem, 0, margem, margem / 2)
+                        setPadding(margem, margem / 3, margem, margem / 3)
                     }
-                linha.addView(
-                    android.widget.TextView(contexto).apply {
-                        text = titulo
-                        setPadding(0, 0, margem, 0)
-                    },
-                )
-                val lado = (30 * densidade).toInt()
+                val lado = (26 * densidade).toInt()
                 for (cor in cores) {
                     linha.addView(
                         android.view.View(contexto).apply {
@@ -2111,40 +2115,75 @@ function resultado(){return JSON.stringify({mudou:e.innerHTML!==original,html:e.
                                     setStroke(densidade.toInt().coerceAtLeast(1), 0xFF888888.toInt())
                                     cornerRadius = 4 * densidade
                                 }
-                            contentDescription = "$titulo $cor"
-                            setOnClickListener { webView.evaluateJavascript("cmd('$comando','$cor')", null) }
+                            contentDescription = cor
+                            setOnClickListener {
+                                rodar("cmd('$comando','$cor')")
+                                alternar(null)
+                            }
                         },
                         LinearLayout.LayoutParams(lado, lado).apply { marginEnd = margem / 2 },
                     )
                 }
                 if (valorSemCor != null) {
                     linha.addView(
-                        android.widget.Button(contexto, null, android.R.attr.borderlessButtonStyle).apply {
-                            text = "Sem"
-                            isAllCaps = false
-                            minWidth = 0
-                            minimumWidth = 0
-                            isFocusable = false
-                            setOnClickListener { webView.evaluateJavascript("cmd('$comando','$valorSemCor')", null) }
+                        botaoCompacto("Sem") {
+                            rodar("cmd('$comando','$valorSemCor')")
+                            alternar(null)
                         },
                     )
                 }
-                return android.widget.HorizontalScrollView(contexto).apply { addView(linha) }
+                return android.widget.HorizontalScrollView(contexto).apply {
+                    addView(linha)
+                    visibility = android.view.View.GONE
+                }
             }
             val linhaFonte =
                 linhaDeCores(
-                    "Fonte",
                     "foreColor",
                     listOf("#e53935", "#fb8c00", "#fdd835", "#43a047", "#1e88e5", "#8e24aa", "#d81b60", "#757575", "#000000", "#ffffff"),
                     null,
                 )
             val linhaGrifo =
                 linhaDeCores(
-                    "Grifo",
                     "hiliteColor",
                     listOf("#ffe066", "#b9f6ca", "#b3e5fc", "#f8bbd0", "#ffcc80", "#e1bee7", "#e0e0e0", "#ff8a80"),
                     "transparent",
                 )
+            val linhaMais =
+                android.widget.HorizontalScrollView(contexto).apply {
+                    addView(
+                        LinearLayout(contexto).apply {
+                            orientation = LinearLayout.HORIZONTAL
+                            addView(botaoCompacto("Lista") { rodar("cmd('insertUnorderedList')") })
+                            addView(botaoCompacto("Lista 1-2-3") { rodar("cmd('insertOrderedList')") })
+                            addView(botaoCompacto("Limpar formato") { rodar("cmd('removeFormat')") })
+                        },
+                    )
+                    visibility = android.view.View.GONE
+                }
+            recolhiveis.addAll(listOf(linhaFonte, linhaGrifo, linhaMais))
+
+            // barra principal: uma linha so, com letras no lugar das palavras
+            barra.addView(
+                botaoCompacto("N") { rodar("cmd('bold')") }.apply { setTypeface(typeface, android.graphics.Typeface.BOLD) },
+            )
+            barra.addView(
+                botaoCompacto("I") { rodar("cmd('italic')") }.apply { setTypeface(typeface, android.graphics.Typeface.ITALIC) },
+            )
+            barra.addView(
+                botaoCompacto("S") { rodar("cmd('underline')") }.apply {
+                    paintFlags = paintFlags or android.graphics.Paint.UNDERLINE_TEXT_FLAG
+                },
+            )
+            barra.addView(
+                botaoCompacto("T") { rodar("cmd('strikeThrough')") }.apply {
+                    paintFlags = paintFlags or android.graphics.Paint.STRIKE_THRU_TEXT_FLAG
+                },
+            )
+            barra.addView(botaoCompacto("Fonte") { alternar(linhaFonte) })
+            barra.addView(botaoCompacto("Grifo") { alternar(linhaGrifo) })
+            barra.addView(botaoCompacto("Desfazer") { rodar("cmd('undo')") })
+            barra.addView(botaoCompacto("Mais") { alternar(linhaMais) })
             val larguraTotal =
                 LinearLayout.LayoutParams(
                     android.view.ViewGroup.LayoutParams.MATCH_PARENT,
@@ -2156,6 +2195,7 @@ function resultado(){return JSON.stringify({mudou:e.innerHTML!==original,html:e.
                     addView(android.widget.HorizontalScrollView(contexto).apply { addView(barra) }, larguraTotal)
                     addView(linhaFonte, LinearLayout.LayoutParams(larguraTotal))
                     addView(linhaGrifo, LinearLayout.LayoutParams(larguraTotal))
+                    addView(linhaMais, LinearLayout.LayoutParams(larguraTotal))
                     addView(webView, LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
                 }
             val dialog =
