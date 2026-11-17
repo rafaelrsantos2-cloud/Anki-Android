@@ -1864,6 +1864,11 @@ class NoteEditorFragment :
                 showMultimediaBottomSheet()
                 multimediaController.handleActions(i)
             }
+            // AnkiDroid Rafael: botao de edicao visual do campo
+            editLineView.binding.visualButton.apply {
+                contentDescription = "Editar visualmente: ${editLineView.name}"
+                setOnClickListener { showRafaelVisualEditor(newEditText, editLineView.name ?: "") }
+            }
             if (addNote) {
                 // toggle sticky button
                 toggleStickyButton.setBackgroundResource(R.drawable.ic_baseline_push_pin_24)
@@ -2002,6 +2007,130 @@ class NoteEditorFragment :
     fun clearField(index: Int) {
         setFieldValueFromUi(index, "")
     }
+
+    // region AnkiDroid Rafael: editor visual de campo (texto formatado, sem HTML)
+
+    @Suppress("DEPRECATION")
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private fun showRafaelVisualEditor(
+        editText: FieldEditText,
+        nomeCampo: String,
+    ) {
+        lifecycleScope.launch {
+            val contexto = requireContext()
+            val substituirQuebras = shouldReplaceNewlines()
+            val htmlAtual = convertToHtmlNewline(editText.text.toString(), substituirQuebras)
+            val noturno = com.ichi2.themes.Themes.isNightTheme
+            val fundo = if (noturno) "#2b2b2b" else "#ffffff"
+            val corTexto = if (noturno) "#eeeeee" else "#111111"
+            val pagina = """<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+html,body{margin:0;padding:0;background:$fundo;color:$corTexto;font-family:sans-serif;font-size:18px;line-height:1.5}
+#e{min-height:92vh;padding:12px;outline:none;word-wrap:break-word}
+img{max-width:100%;height:auto}
+</style></head><body><div id="e" contenteditable="true"></div>
+<script>
+var e=document.getElementById('e');
+e.innerHTML=${org.json.JSONObject.quote(htmlAtual)};
+var original=e.innerHTML;
+e.addEventListener('beforeinput',function(ev){if(ev.inputType==='insertParagraph'){ev.preventDefault();document.execCommand('insertLineBreak');}});
+function cmd(c,v){e.focus();document.execCommand(c,false,v||null);}
+function resultado(){return JSON.stringify({mudou:e.innerHTML!==original,html:e.innerHTML});}
+</script></body></html>"""
+            val pastaMidia =
+                try {
+                    "file://" + com.ichi2.anki.CollectionManager.withCol { media.dir.absolutePath } + "/"
+                } catch (e: Exception) {
+                    Timber.w(e, "editor visual: pasta de midia indisponivel")
+                    null
+                }
+            val webView =
+                android.webkit.WebView(contexto).apply {
+                    settings.javaScriptEnabled = true
+                    settings.allowFileAccess = true
+                    isFocusable = true
+                    isFocusableInTouchMode = true
+                    loadDataWithBaseURL(pastaMidia, pagina, "text/html", "utf-8", null)
+                }
+            val margem = (10 * resources.displayMetrics.density).toInt()
+            val barra = LinearLayout(contexto).apply { orientation = LinearLayout.HORIZONTAL }
+
+            fun botao(
+                rotulo: String,
+                js: String,
+            ) {
+                barra.addView(
+                    android.widget.Button(contexto, null, android.R.attr.borderlessButtonStyle).apply {
+                        text = rotulo
+                        isAllCaps = false
+                        minWidth = 0
+                        minimumWidth = 0
+                        setPadding(margem, 0, margem, 0)
+                        isFocusable = false
+                        setOnClickListener { webView.evaluateJavascript(js, null) }
+                    },
+                )
+            }
+            botao("Negrito", "cmd('bold')")
+            botao("It\u00e1lico", "cmd('italic')")
+            botao("Sublinhado", "cmd('underline')")
+            botao("Marca-texto", "cmd('hiliteColor','#ffe066')")
+            botao("Vermelho", "cmd('foreColor','#e53935')")
+            botao("Lista", "cmd('insertUnorderedList')")
+            botao("Lista 1-2-3", "cmd('insertOrderedList')")
+            botao("Limpar formato", "cmd('removeFormat')")
+            botao("Desfazer", "cmd('undo')")
+            val container =
+                LinearLayout(contexto).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        android.widget.HorizontalScrollView(contexto).apply { addView(barra) },
+                        LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT),
+                    )
+                    addView(webView, LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+                }
+            val dialog =
+                AlertDialog
+                    .Builder(contexto)
+                    .setTitle(nomeCampo)
+                    .setView(container)
+                    .setPositiveButton("Salvar", null)
+                    .setNegativeButton("Cancelar", null)
+                    .create()
+            dialog.setOnShowListener {
+                dialog.window?.apply {
+                    // sem isto o teclado nao abre para um WebView dentro de um dialogo
+                    clearFlags(
+                        android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                            android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
+                    )
+                    setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+                    setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+                }
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    webView.evaluateJavascript("resultado()") { bruto ->
+                        try {
+                            val json = org.json.JSONObject(org.json.JSONTokener(bruto).nextValue() as String)
+                            // so grava se algo mudou, para nao reescrever o HTML do campo a toa
+                            if (json.getBoolean("mudou")) {
+                                editText.setContent(json.getString("html"), substituirQuebras)
+                            }
+                            dialog.dismiss()
+                        } catch (e: Exception) {
+                            Timber.w(e, "editor visual: falha ao ler o texto")
+                            android.widget.Toast
+                                .makeText(contexto, "N\u00e3o foi poss\u00edvel ler o texto editado", android.widget.Toast.LENGTH_LONG)
+                                .show()
+                        }
+                    }
+                }
+            }
+            dialog.show()
+        }
+    }
+
+    // endregion
 
     private fun initFieldEditText(
         editText: FieldEditText?,
