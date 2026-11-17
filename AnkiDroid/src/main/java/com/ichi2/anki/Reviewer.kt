@@ -1491,17 +1491,28 @@ open class Reviewer :
                 easeButton2!!.nextTime = labels[1]
                 easeButton3!!.nextTime = labels[2]
                 easeButton4!!.nextTime = labels[3]
+                if (answerButtonsPosition == "right") aplicarNumerosNaBarraDireita(labels)
             }
         }
     }
 
     /** AnkiDroid Rafael: com a barra na direita, os botoes mostram so os numeros 1 a 4 */
-    private fun aplicarNumerosNaBarraDireita() {
+    private fun aplicarNumerosNaBarraDireita(tempos: List<String>? = null) {
         val eases = intArrayOf(R.id.ease1, R.id.ease2, R.id.ease3, R.id.ease4)
+        val temposViews = intArrayOf(R.id.nextTime1, R.id.nextTime2, R.id.nextTime3, R.id.nextTime4)
+        val largura = (130 * resources.displayMetrics.density).toInt()
         for (i in eases.indices) {
+            // o tempo vai na mesma linha do numero; a linha propria do tempo fica escondida
+            findViewById<View>(temposViews[i]).visibility = View.GONE
             findViewById<TextView>(eases[i]).apply {
-                text = (i + 1).toString()
-                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 20f)
+                val tempo = tempos?.getOrNull(i)?.takeIf { it.isNotBlank() }
+                text = if (tempo != null) "${i + 1} \u00b7 $tempo" else (i + 1).toString()
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                setSingleLine(true)
+                gravity = android.view.Gravity.CENTER
+                // texto deitado (girado 90 graus): a largura fixa vira a altura ocupada no botao
+                layoutParams = LinearLayout.LayoutParams(largura, ViewGroup.LayoutParams.WRAP_CONTENT)
+                rotation = 90f
             }
         }
     }

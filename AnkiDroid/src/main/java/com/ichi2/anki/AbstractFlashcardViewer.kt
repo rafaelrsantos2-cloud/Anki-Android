@@ -1047,7 +1047,7 @@ abstract class AbstractFlashcardViewer :
                 touchLayerContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
                 answerAreaParams.addRule(RelativeLayout.ALIGN_PARENT_END)
                 answerAreaParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
-                answerAreaParams.width = (56 * resources.displayMetrics.density).toInt()
+                answerAreaParams.width = (30 * resources.displayMetrics.density).toInt()
                 answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
                     LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -1090,15 +1090,16 @@ abstract class AbstractFlashcardViewer :
                     }
                 }
                 (findViewById<ViewGroup>(R.id.flashcard_layout_flip).getChildAt(0) as? android.widget.TextView)?.apply {
+                    // texto deitado (girado 90 graus), para a coluna poder ser bem estreita
                     layoutParams =
                         FrameLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            (170 * resources.displayMetrics.density).toInt(),
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                             android.view.Gravity.CENTER,
                         )
-                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
-                    setSingleLine(false)
-                    maxLines = 3
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f)
+                    setSingleLine(true)
+                    rotation = 90f
                     gravity = android.view.Gravity.CENTER
                     setPadding(margemLateral, paddingTop, margemLateral, paddingBottom)
                 }            }
