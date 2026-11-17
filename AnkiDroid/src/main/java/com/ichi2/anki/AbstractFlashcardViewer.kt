@@ -1047,7 +1047,7 @@ abstract class AbstractFlashcardViewer :
                 touchLayerContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
                 answerAreaParams.addRule(RelativeLayout.ALIGN_PARENT_END)
                 answerAreaParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
-                answerAreaParams.width = (84 * resources.displayMetrics.density).toInt()
+                answerAreaParams.width = (56 * resources.displayMetrics.density).toInt()
                 answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
                     LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
@@ -1096,7 +1096,7 @@ abstract class AbstractFlashcardViewer :
                             ViewGroup.LayoutParams.WRAP_CONTENT,
                             android.view.Gravity.CENTER,
                         )
-                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f)
+                    setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f)
                     setSingleLine(false)
                     maxLines = 3
                     gravity = android.view.Gravity.CENTER

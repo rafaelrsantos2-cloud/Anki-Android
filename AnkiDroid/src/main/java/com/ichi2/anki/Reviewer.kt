@@ -1478,6 +1478,7 @@ open class Reviewer :
         easeButton3!!.setup(background[2], textColor[2], R.string.ease_button_good)
         easeButton4!!.setVisibility(View.VISIBLE)
         easeButton3!!.requestFocus()
+        if (answerButtonsPosition == "right") aplicarNumerosNaBarraDireita()
 
         // Show next review time
         if (shouldShowNextReviewTime()) {
@@ -1489,6 +1490,19 @@ open class Reviewer :
                 easeButton3!!.nextTime = labels[2]
                 easeButton4!!.nextTime = labels[3]
             }
+        }
+    }
+
+    /** AnkiDroid Rafael: com a barra na direita, os botoes mostram so os numeros 1 a 4 */
+    private fun aplicarNumerosNaBarraDireita() {
+        val eases = intArrayOf(R.id.ease1, R.id.ease2, R.id.ease3, R.id.ease4)
+        val tempos = intArrayOf(R.id.nextTime1, R.id.nextTime2, R.id.nextTime3, R.id.nextTime4)
+        for (i in eases.indices) {
+            findViewById<TextView>(eases[i]).apply {
+                text = (i + 1).toString()
+                setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 22f)
+            }
+            findViewById<View>(tempos[i]).visibility = View.GONE
         }
     }
 
