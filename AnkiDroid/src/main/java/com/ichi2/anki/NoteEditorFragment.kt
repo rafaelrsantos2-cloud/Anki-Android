@@ -2075,19 +2075,87 @@ function resultado(){return JSON.stringify({mudou:e.innerHTML!==original,html:e.
             botao("Negrito", "cmd('bold')")
             botao("It\u00e1lico", "cmd('italic')")
             botao("Sublinhado", "cmd('underline')")
-            botao("Marca-texto", "cmd('hiliteColor','#ffe066')")
-            botao("Vermelho", "cmd('foreColor','#e53935')")
+            botao("Tachado", "cmd('strikeThrough')")
             botao("Lista", "cmd('insertUnorderedList')")
             botao("Lista 1-2-3", "cmd('insertOrderedList')")
             botao("Limpar formato", "cmd('removeFormat')")
             botao("Desfazer", "cmd('undo')")
+            val densidade = resources.displayMetrics.density
+
+            // linha de quadradinhos de cor: um toque aplica a cor ao texto selecionado
+            fun linhaDeCores(
+                titulo: String,
+                comando: String,
+                cores: List<String>,
+                valorSemCor: String?,
+            ): android.view.View {
+                val linha =
+                    LinearLayout(contexto).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = android.view.Gravity.CENTER_VERTICAL
+                        setPadding(margem, 0, margem, margem / 2)
+                    }
+                linha.addView(
+                    android.widget.TextView(contexto).apply {
+                        text = titulo
+                        setPadding(0, 0, margem, 0)
+                    },
+                )
+                val lado = (30 * densidade).toInt()
+                for (cor in cores) {
+                    linha.addView(
+                        android.view.View(contexto).apply {
+                            background =
+                                android.graphics.drawable.GradientDrawable().apply {
+                                    setColor(android.graphics.Color.parseColor(cor))
+                                    setStroke(densidade.toInt().coerceAtLeast(1), 0xFF888888.toInt())
+                                    cornerRadius = 4 * densidade
+                                }
+                            contentDescription = "$titulo $cor"
+                            setOnClickListener { webView.evaluateJavascript("cmd('$comando','$cor')", null) }
+                        },
+                        LinearLayout.LayoutParams(lado, lado).apply { marginEnd = margem / 2 },
+                    )
+                }
+                if (valorSemCor != null) {
+                    linha.addView(
+                        android.widget.Button(contexto, null, android.R.attr.borderlessButtonStyle).apply {
+                            text = "Sem"
+                            isAllCaps = false
+                            minWidth = 0
+                            minimumWidth = 0
+                            isFocusable = false
+                            setOnClickListener { webView.evaluateJavascript("cmd('$comando','$valorSemCor')", null) }
+                        },
+                    )
+                }
+                return android.widget.HorizontalScrollView(contexto).apply { addView(linha) }
+            }
+            val linhaFonte =
+                linhaDeCores(
+                    "Fonte",
+                    "foreColor",
+                    listOf("#e53935", "#fb8c00", "#fdd835", "#43a047", "#1e88e5", "#8e24aa", "#d81b60", "#757575", "#000000", "#ffffff"),
+                    null,
+                )
+            val linhaGrifo =
+                linhaDeCores(
+                    "Grifo",
+                    "hiliteColor",
+                    listOf("#ffe066", "#b9f6ca", "#b3e5fc", "#f8bbd0", "#ffcc80", "#e1bee7", "#e0e0e0", "#ff8a80"),
+                    "transparent",
+                )
+            val larguraTotal =
+                LinearLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
             val container =
                 LinearLayout(contexto).apply {
                     orientation = LinearLayout.VERTICAL
-                    addView(
-                        android.widget.HorizontalScrollView(contexto).apply { addView(barra) },
-                        LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT),
-                    )
+                    addView(android.widget.HorizontalScrollView(contexto).apply { addView(barra) }, larguraTotal)
+                    addView(linhaFonte, LinearLayout.LayoutParams(larguraTotal))
+                    addView(linhaGrifo, LinearLayout.LayoutParams(larguraTotal))
                     addView(webView, LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
                 }
             val dialog =
