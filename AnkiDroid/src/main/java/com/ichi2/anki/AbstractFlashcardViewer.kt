@@ -1037,6 +1037,33 @@ abstract class AbstractFlashcardViewer :
                 answerAreaParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
             }
 
+            "right" -> {
+                // AnkiDroid Rafael: barra de respostas vertical na lateral direita
+                whiteboardContainerParams.addRule(RelativeLayout.START_OF, R.id.bottom_area_layout)
+                whiteboardContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
+                flashcardContainerParams.addRule(RelativeLayout.START_OF, R.id.bottom_area_layout)
+                flashcardContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
+                touchLayerContainerParams.addRule(RelativeLayout.START_OF, R.id.bottom_area_layout)
+                touchLayerContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
+                answerAreaParams.addRule(RelativeLayout.ALIGN_PARENT_END)
+                answerAreaParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
+                answerAreaParams.width = (92 * resources.displayMetrics.density).toInt()
+                answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+                findViewById<View>(R.id.answer_options_layout).layoutParams =
+                    LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+                findViewById<LinearLayout>(R.id.ease_buttons).orientation = LinearLayout.VERTICAL
+                for (id in intArrayOf(
+                    R.id.flashcard_layout_ease1,
+                    R.id.flashcard_layout_ease2,
+                    R.id.flashcard_layout_ease3,
+                    R.id.flashcard_layout_ease4,
+                )) {
+                    findViewById<View>(id).layoutParams =
+                        LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+                }
+                findViewById<View>(R.id.flashcard_layout_flip).layoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+            }
+
             else -> Timber.w("Unknown answerButtonsPosition: %s", answerButtonsPosition)
         }
         answerArea.visibility = if (answerButtonsPosition == "none") View.GONE else View.VISIBLE

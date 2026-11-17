@@ -457,8 +457,13 @@ open class Reviewer :
         // 'bottom' => the answer area.
         // 'top' => the card and its overlays.
         // 'none' => type the answer + ime
-        val cardBottom = if (answerButtonsPosition == "top") bottomBars else zero
-        val bottomAreaBottom = if (answerButtonsPosition == "none") bottomBarsAndKeyboard else zero
+        val cardBottom = if (answerButtonsPosition == "top" || answerButtonsPosition == "right") bottomBars else zero
+        val bottomAreaBottom =
+            when (answerButtonsPosition) {
+                "none" -> bottomBarsAndKeyboard
+                "right" -> bottomBars
+                else -> zero
+            }
         val whiteboardPaletteBottom = if (answerButtonsAtBottom) zero else bottomBars
         val answerAreaBottom =
             when {
@@ -814,10 +819,17 @@ open class Reviewer :
             R.id.action_rafael_toggle_answer_buttons -> {
                 // AnkiDroid Rafael: alterna a barra de respostas entre cima e baixo
                 val chave = getString(R.string.answer_buttons_position_preference)
-                val novaPosicao = if (sharedPrefs().getString(chave, "bottom") == "top") "bottom" else "top"
-                Timber.i("Reviewer:: barra de respostas -> %s", novaPosicao)
-                sharedPrefs().edit().putString(chave, novaPosicao).apply()
-                recreate()
+                val posicoes = arrayOf("bottom", "top", "right")
+                val nomes = arrayOf<CharSequence>("Embaixo", "Em cima", "\u00c0 direita")
+                AlertDialog
+                    .Builder(this)
+                    .setTitle("Bot\u00f5es de resposta")
+                    .setSingleChoiceItems(nomes, posicoes.indexOf(sharedPrefs().getString(chave, "bottom"))) { dialog, qual ->
+                        dialog.dismiss()
+                        Timber.i("Reviewer:: barra de respostas -> %s", posicoes[qual])
+                        sharedPrefs().edit().putString(chave, posicoes[qual]).apply()
+                        recreate()
+                    }.show()
             }
             R.id.action_corrigir_card -> {
                 Timber.i("Reviewer:: Corrigir card button pressed")
@@ -1508,7 +1520,7 @@ open class Reviewer :
                 .getString("answerButtonPosition", "bottom")
         val layoutParams: RelativeLayout.LayoutParams
         when (answerButtonsPosition) {
-            "none", "top" -> {
+            "none", "top", "right" -> {
                 layoutParams = colorPalette.layoutParams as RelativeLayout.LayoutParams
                 layoutParams.removeRule(RelativeLayout.ABOVE)
                 layoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
