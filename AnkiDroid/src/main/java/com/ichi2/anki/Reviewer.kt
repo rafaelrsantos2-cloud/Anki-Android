@@ -457,11 +457,11 @@ open class Reviewer :
         // 'bottom' => the answer area.
         // 'top' => the card and its overlays.
         // 'none' => type the answer + ime
-        val cardBottom = if (answerButtonsPosition == "top" || answerButtonsPosition == "right") bottomBars else zero
+        val cardBottom = if (answerButtonsPosition == "top" || (answerButtonsPosition == "right" || answerButtonsPosition == "left")) bottomBars else zero
         val bottomAreaBottom =
             when (answerButtonsPosition) {
                 "none" -> bottomBarsAndKeyboard
-                "right" -> bottomBars
+                "right", "left" -> bottomBars
                 else -> zero
             }
         val whiteboardPaletteBottom = if (answerButtonsAtBottom) zero else bottomBars
@@ -819,8 +819,8 @@ open class Reviewer :
             R.id.action_rafael_toggle_answer_buttons -> {
                 // AnkiDroid Rafael: alterna a barra de respostas entre cima e baixo
                 val chave = getString(R.string.answer_buttons_position_preference)
-                val posicoes = arrayOf("bottom", "top", "right")
-                val nomes = arrayOf<CharSequence>("Embaixo", "Em cima", "\u00c0 direita")
+                val posicoes = arrayOf("bottom", "top", "right", "left")
+                val nomes = arrayOf<CharSequence>("Embaixo", "Em cima", "\u00c0 direita", "\u00c0 esquerda")
                 AlertDialog
                     .Builder(this)
                     .setTitle("Bot\u00f5es de resposta")
@@ -1478,7 +1478,7 @@ open class Reviewer :
         easeButton3!!.setup(background[2], textColor[2], R.string.ease_button_good)
         easeButton4!!.setVisibility(View.VISIBLE)
         easeButton3!!.requestFocus()
-        if (answerButtonsPosition == "right") aplicarNumerosNaBarraDireita()
+        if ((answerButtonsPosition == "right" || answerButtonsPosition == "left")) aplicarNumerosNaBarraDireita()
 
         // Show next review time
         if (shouldShowNextReviewTime()) {
@@ -1486,12 +1486,12 @@ open class Reviewer :
             launchCatchingTask {
                 val labels =
                     withCol { sched.describeNextStates(state.states) }
-                        .let { l -> if (answerButtonsPosition == "right") l.map { tempoCompacto(it) } else l }
+                        .let { l -> if ((answerButtonsPosition == "right" || answerButtonsPosition == "left")) l.map { tempoCompacto(it) } else l }
                 easeButton1!!.nextTime = labels[0]
                 easeButton2!!.nextTime = labels[1]
                 easeButton3!!.nextTime = labels[2]
                 easeButton4!!.nextTime = labels[3]
-                if (answerButtonsPosition == "right") aplicarNumerosNaBarraDireita(labels)
+                if ((answerButtonsPosition == "right" || answerButtonsPosition == "left")) aplicarNumerosNaBarraDireita(labels)
             }
         }
     }
@@ -1563,7 +1563,7 @@ open class Reviewer :
                 .getString("answerButtonPosition", "bottom")
         val layoutParams: RelativeLayout.LayoutParams
         when (answerButtonsPosition) {
-            "none", "top", "right" -> {
+            "none", "top", "right", "left" -> {
                 layoutParams = colorPalette.layoutParams as RelativeLayout.LayoutParams
                 layoutParams.removeRule(RelativeLayout.ABOVE)
                 layoutParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)

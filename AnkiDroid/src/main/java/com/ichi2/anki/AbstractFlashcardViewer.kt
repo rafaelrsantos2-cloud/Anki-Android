@@ -1037,15 +1037,17 @@ abstract class AbstractFlashcardViewer :
                 answerAreaParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM)
             }
 
-            "right" -> {
-                // AnkiDroid Rafael: barra de respostas vertical na lateral direita
-                whiteboardContainerParams.addRule(RelativeLayout.START_OF, R.id.bottom_area_layout)
+            "right", "left" -> {
+                // AnkiDroid Rafael: barra de respostas vertical na lateral direita ou esquerda
+                val naEsquerda = answerButtonsPosition == "left"
+                val aoLadoDaBarra = if (naEsquerda) RelativeLayout.END_OF else RelativeLayout.START_OF
+                whiteboardContainerParams.addRule(aoLadoDaBarra, R.id.bottom_area_layout)
                 whiteboardContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
-                flashcardContainerParams.addRule(RelativeLayout.START_OF, R.id.bottom_area_layout)
+                flashcardContainerParams.addRule(aoLadoDaBarra, R.id.bottom_area_layout)
                 flashcardContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
-                touchLayerContainerParams.addRule(RelativeLayout.START_OF, R.id.bottom_area_layout)
+                touchLayerContainerParams.addRule(aoLadoDaBarra, R.id.bottom_area_layout)
                 touchLayerContainerParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
-                answerAreaParams.addRule(RelativeLayout.ALIGN_PARENT_END)
+                answerAreaParams.addRule(if (naEsquerda) RelativeLayout.ALIGN_PARENT_START else RelativeLayout.ALIGN_PARENT_END)
                 answerAreaParams.addRule(RelativeLayout.BELOW, R.id.mic_tool_bar_layer)
                 answerAreaParams.width = (30 * resources.displayMetrics.density).toInt()
                 answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
