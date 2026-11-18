@@ -102,6 +102,11 @@
         </menu>
     </item>
     <item
+        android:id="@+id/action_rafael_sync"
+        android:icon="@drawable/ic_sync"
+        android:title="Sincronizar"
+        ankidroid:showAsAction="ifRoom"/>
+    <item
         android:id="@+id/action_rafael_toggle_answer_buttons"
         android:title="Posi&#231;&#227;o dos bot&#245;es de resposta"
         ankidroid:showAsAction="never"/>

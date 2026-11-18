@@ -281,7 +281,7 @@ open class Reviewer :
             else -> launchCatchingTask { answerTimer.resume() }
         }
         super.onResume()
-        if (RafaelBackgroundSync.consumirRetorno()) rafaelSyncAoVoltar()
+        if (RafaelBackgroundSync.consumirRetorno()) rafaelSincronizarNaRevisao()
         if (typeAnswer?.autoFocusEditText() == true) {
             answerField?.focusWithKeyboard()
         }
@@ -291,23 +291,32 @@ open class Reviewer :
      * AnkiDroid Rafael: ao voltar para o app com a revisao aberta, busca as mudancas feitas no PC
      * e recarrega o card atual (na pergunta), para nao revisar com dados antigos.
      */
-    private fun rafaelSyncAoVoltar() {
+    private fun rafaelSincronizarNaRevisao(manual: Boolean = false) {
         launchCatchingTask {
             val intervalo = sharedPrefs().getString("rafaelAutoSyncInterval", null)
-            if (!Prefs.isAutoSyncEnabled ||
-                intervalo == "0" ||
-                !isLoggedIn() ||
-                !com.ichi2.utils.NetworkUtils.isOnline ||
-                com.ichi2.anki.sync.MeteredSyncPolicy
-                    .shouldBlock()
-            ) {
+            // pelo botao (manual) vale sempre; ao voltar para o app, so com a sincronizacao automatica ligada
+            val bloqueio =
+                when {
+                    !isLoggedIn() -> "Fa\u00e7a login no AnkiWeb para sincronizar"
+                    !com.ichi2.utils.NetworkUtils.isOnline -> "Sem internet para sincronizar"
+                    manual -> null
+                    !Prefs.isAutoSyncEnabled || intervalo == "0" -> ""
+                    com.ichi2.anki.sync.MeteredSyncPolicy
+                        .shouldBlock() -> ""
+                    else -> null
+                }
+            if (bloqueio != null) {
+                if (manual) showSnackbar(bloqueio, Snackbar.LENGTH_LONG)
                 return@launchCatchingTask
             }
             val auth = syncAuth() ?: return@launchCatchingTask
             val status =
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     runCatching { CollectionManager.getBackend().syncStatus(auth) }.getOrNull()
-                } ?: return@launchCatchingTask
+                } ?: run {
+                    if (manual) showSnackbar("N\u00e3o foi poss\u00edvel sincronizar agora", Snackbar.LENGTH_LONG)
+                    return@launchCatchingTask
+                }
             val avisoCompleta = "Sincroniza\u00e7\u00e3o completa necess\u00e1ria: volte \u00e0 lista de baralhos"
             when (status.required) {
                 anki.sync.SyncStatusResponse.Required.NORMAL_SYNC -> {}
@@ -315,9 +324,12 @@ open class Reviewer :
                     showSnackbar(avisoCompleta, Snackbar.LENGTH_LONG)
                     return@launchCatchingTask
                 }
-                else -> return@launchCatchingTask
+                else -> {
+                    if (manual) showSnackbar("J\u00e1 est\u00e1 sincronizado", Snackbar.LENGTH_SHORT)
+                    return@launchCatchingTask
+                }
             }
-            Timber.i("sync ao voltar para a revisao: iniciando")
+            Timber.i("sync na revisao: iniciando (manual=%b)", manual)
             try {
                 val resposta = withProgress("Sincronizando\u2026") { withCol { syncCollection(auth, syncMedia = false) } }
                 if (resposta.required != anki.sync.SyncCollectionResponse.ChangesRequired.NO_CHANGES) {
@@ -334,6 +346,7 @@ open class Reviewer :
                         .start(this@Reviewer, auth)
                 }
                 updateCardAndRedraw()
+                if (manual) showSnackbar("Sincronizado", Snackbar.LENGTH_SHORT)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -872,6 +885,10 @@ open class Reviewer :
             R.id.action_tag -> {
                 Timber.i("Reviewer:: Tag button pressed")
                 showTagsDialog()
+            }
+            R.id.action_rafael_sync -> {
+                Timber.i("Reviewer:: Sincronizar pressionado")
+                rafaelSincronizarNaRevisao(manual = true)
             }
             R.id.action_rafael_toggle_answer_buttons -> {
                 // AnkiDroid Rafael: alterna a barra de respostas entre cima e baixo
