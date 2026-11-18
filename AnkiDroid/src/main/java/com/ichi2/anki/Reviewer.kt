@@ -281,8 +281,65 @@ open class Reviewer :
             else -> launchCatchingTask { answerTimer.resume() }
         }
         super.onResume()
+        if (RafaelBackgroundSync.consumirRetorno()) rafaelSyncAoVoltar()
         if (typeAnswer?.autoFocusEditText() == true) {
             answerField?.focusWithKeyboard()
+        }
+    }
+
+    /**
+     * AnkiDroid Rafael: ao voltar para o app com a revisao aberta, busca as mudancas feitas no PC
+     * e recarrega o card atual (na pergunta), para nao revisar com dados antigos.
+     */
+    private fun rafaelSyncAoVoltar() {
+        launchCatchingTask {
+            val intervalo = sharedPrefs().getString("rafaelAutoSyncInterval", null)
+            if (!Prefs.isAutoSyncEnabled ||
+                intervalo == "0" ||
+                !isLoggedIn() ||
+                !com.ichi2.utils.NetworkUtils.isOnline ||
+                com.ichi2.anki.sync.MeteredSyncPolicy
+                    .shouldBlock()
+            ) {
+                return@launchCatchingTask
+            }
+            val auth = syncAuth() ?: return@launchCatchingTask
+            val status =
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching { CollectionManager.getBackend().syncStatus(auth) }.getOrNull()
+                } ?: return@launchCatchingTask
+            val avisoCompleta = "Sincroniza\u00e7\u00e3o completa necess\u00e1ria: volte \u00e0 lista de baralhos"
+            when (status.required) {
+                anki.sync.SyncStatusResponse.Required.NORMAL_SYNC -> {}
+                anki.sync.SyncStatusResponse.Required.FULL_SYNC -> {
+                    showSnackbar(avisoCompleta, Snackbar.LENGTH_LONG)
+                    return@launchCatchingTask
+                }
+                else -> return@launchCatchingTask
+            }
+            Timber.i("sync ao voltar para a revisao: iniciando")
+            try {
+                val resposta = withProgress("Sincronizando\u2026") { withCol { syncCollection(auth, syncMedia = false) } }
+                if (resposta.required != anki.sync.SyncCollectionResponse.ChangesRequired.NO_CHANGES) {
+                    showSnackbar(avisoCompleta, Snackbar.LENGTH_LONG)
+                    return@launchCatchingTask
+                }
+                if (resposta.hasNewEndpoint() && resposta.newEndpoint.isNotEmpty()) {
+                    Prefs.currentSyncUri = resposta.newEndpoint
+                }
+                withCol { _loadScheduler() } // a versao do agendador pode ter mudado
+                setLastSyncTimeToNow()
+                if (shouldFetchMedia()) {
+                    com.ichi2.anki.worker.SyncMediaWorker
+                        .start(this@Reviewer, auth)
+                }
+                updateCardAndRedraw()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w(e, "sync ao voltar para a revisao: falhou")
+                showSnackbar("N\u00e3o foi poss\u00edvel sincronizar agora", Snackbar.LENGTH_LONG)
+            }
         }
     }
 

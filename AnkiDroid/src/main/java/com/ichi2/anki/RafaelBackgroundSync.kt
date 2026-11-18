@@ -18,12 +18,34 @@ import timber.log.Timber
  */
 object RafaelBackgroundSync : DefaultLifecycleObserver {
     private var ultimoInicioMs = 0L
+    private var saiuEmMs = 0L
+    private var voltouEmMs = 0L
+
+    /** tempo minimo fora do app para a revisao buscar as mudancas do PC ao voltar */
+    private const val AUSENCIA_MINIMA_MS = 20_000L
 
     fun register() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
 
+    override fun onStart(owner: LifecycleOwner) {
+        val agora = System.currentTimeMillis()
+        voltouEmMs = if (saiuEmMs != 0L && agora - saiuEmMs >= AUSENCIA_MINIMA_MS) agora else 0L
+        saiuEmMs = 0L
+    }
+
+    /**
+     * Verdadeiro uma unica vez, logo depois de o app voltar de um periodo em segundo plano.
+     * A tela de revisao usa isto para sincronizar ao voltar.
+     */
+    fun consumirRetorno(): Boolean {
+        val voltou = voltouEmMs != 0L && System.currentTimeMillis() - voltouEmMs < 5_000L
+        voltouEmMs = 0L
+        return voltou
+    }
+
     override fun onStop(owner: LifecycleOwner) {
+        saiuEmMs = System.currentTimeMillis()
         try {
             val contexto = AnkiDroidApp.instance.applicationContext
             val agora = System.currentTimeMillis()
