@@ -66,6 +66,7 @@ import androidx.core.view.updateLayoutParams
 import androidx.core.view.updateMargins
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import anki.frontend.SetSchedulingStatesRequest
 import anki.scheduler.CardAnswer.Rating
 import com.google.android.material.color.MaterialColors
@@ -282,6 +283,7 @@ open class Reviewer :
         }
         super.onResume()
         if (RafaelBackgroundSync.consumirRetorno()) rafaelSincronizarNaRevisao()
+        rafaelIniciarChecagemDeSync()
         if (typeAnswer?.autoFocusEditText() == true) {
             answerField?.focusWithKeyboard()
         }
@@ -291,6 +293,59 @@ open class Reviewer :
      * AnkiDroid Rafael: ao voltar para o app com a revisao aberta, busca as mudancas feitas no PC
      * e recarrega o card atual (na pergunta), para nao revisar com dados antigos.
      */
+    // region AnkiDroid Rafael: "?" no botao de sincronizar quando ha mudancas nao sincronizadas
+
+    private var rafaelSyncPendente = false
+    private var rafaelChecagemDeSyncIniciada = false
+
+    private fun rafaelIconeSync(pendente: Boolean): android.graphics.drawable.Drawable? {
+        val base = ContextCompat.getDrawable(this, R.drawable.ic_sync)?.mutate() ?: return null
+        return if (pendente) RafaelSyncPendenteDrawable(base) else base
+    }
+
+    private fun rafaelDefinirSyncPendente(pendente: Boolean) {
+        if (rafaelSyncPendente == pendente) return
+        rafaelSyncPendente = pendente
+        refreshActionBar()
+        rafaelBotaoSincronizarLateral?.setImageDrawable(rafaelIconeSync(pendente))
+    }
+
+    /** Consulta o AnkiWeb: ha algo a enviar ou a receber? */
+    private suspend fun rafaelChecarSyncPendente() {
+        if (!isLoggedIn() || !com.ichi2.utils.NetworkUtils.isOnline) return
+        val auth = syncAuth() ?: return
+        val status =
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { CollectionManager.getBackend().syncStatus(auth) }.getOrNull()
+            } ?: return
+        rafaelDefinirSyncPendente(
+            status.required == anki.sync.SyncStatusResponse.Required.NORMAL_SYNC ||
+                status.required == anki.sync.SyncStatusResponse.Required.FULL_SYNC,
+        )
+    }
+
+    /** Com a revisao na tela, confere a cada 2 minutos (pega tambem o que mudou no PC) */
+    private fun rafaelIniciarChecagemDeSync() {
+        if (rafaelChecagemDeSyncIniciada) return
+        rafaelChecagemDeSyncIniciada = true
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                while (true) {
+                    try {
+                        rafaelChecarSyncPendente()
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Timber.w(e, "checagem de sync pendente falhou")
+                    }
+                    kotlinx.coroutines.delay(120_000L)
+                }
+            }
+        }
+    }
+
+    // endregion
+
     override fun rafaelSincronizarPeloBotao() = rafaelSincronizarNaRevisao(manual = true)
 
     private fun rafaelSincronizarNaRevisao(manual: Boolean = false) {
@@ -321,12 +376,14 @@ open class Reviewer :
                 }
             val avisoCompleta = "Sincroniza\u00e7\u00e3o completa necess\u00e1ria: volte \u00e0 lista de baralhos"
             when (status.required) {
-                anki.sync.SyncStatusResponse.Required.NORMAL_SYNC -> {}
+                anki.sync.SyncStatusResponse.Required.NORMAL_SYNC -> rafaelDefinirSyncPendente(true)
                 anki.sync.SyncStatusResponse.Required.FULL_SYNC -> {
+                    rafaelDefinirSyncPendente(true)
                     showSnackbar(avisoCompleta, Snackbar.LENGTH_LONG)
                     return@launchCatchingTask
                 }
                 else -> {
+                    rafaelDefinirSyncPendente(false)
                     if (manual) showSnackbar("J\u00e1 est\u00e1 sincronizado", Snackbar.LENGTH_SHORT)
                     return@launchCatchingTask
                 }
@@ -348,6 +405,7 @@ open class Reviewer :
                         .start(this@Reviewer, auth)
                 }
                 updateCardAndRedraw()
+                rafaelDefinirSyncPendente(false)
                 if (manual) showSnackbar("Sincronizado", Snackbar.LENGTH_SHORT)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -1281,6 +1339,9 @@ open class Reviewer :
         menu.findItem(R.id.action_flag).subMenu?.let { subMenu -> setupFlags(subMenu) }
         displayIcons(menu)
         actionButtons.setCustomButtonsStatus(menu)
+        if (rafaelSyncPendente) {
+            menu.findItem(R.id.action_rafael_sync)?.icon = rafaelIconeSync(pendente = true)
+        }
         val alpha = Themes.ALPHA_ICON_ENABLED_LIGHT
         val markCardIcon = menu.findItem(R.id.action_mark_card)
         if (currentCard != null && isMarked(getColUnsafe, currentCard!!.note(getColUnsafe))) {
@@ -1722,6 +1783,7 @@ open class Reviewer :
      * @param rating The user's rating for the card
      */
     override suspend fun answerCardInner(rating: Rating) {
+        rafaelDefinirSyncPendente(true) // toda resposta e uma mudanca ainda nao sincronizada
         val state = queueState!!
         val cardId = currentCard!!.id
         Timber.d("answerCardInner: $cardId $rating")

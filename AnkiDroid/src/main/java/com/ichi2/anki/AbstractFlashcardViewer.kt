@@ -505,6 +505,9 @@ abstract class AbstractFlashcardViewer :
         // intentionally blank
     }
 
+    /** AnkiDroid Rafael: botao de sincronizar da barra lateral (nulo com a barra em cima ou embaixo) */
+    protected var rafaelBotaoSincronizarLateral: android.widget.ImageView? = null
+
     /** AnkiDroid Rafael: acao do botao de sincronizar da barra lateral; a tela de revisao implementa */
     protected open fun rafaelSincronizarPeloBotao() {
         // intentionally blank
@@ -1097,6 +1100,7 @@ abstract class AbstractFlashcardViewer :
                         setPadding(margem, margem, margem, margem)
                         setOnClickListener { rafaelSincronizarPeloBotao() }
                     }
+                rafaelBotaoSincronizarLateral = botaoSincronizar
                 answerArea.addView(
                     botaoSincronizar,
                     answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
