@@ -291,6 +291,8 @@ open class Reviewer :
      * AnkiDroid Rafael: ao voltar para o app com a revisao aberta, busca as mudancas feitas no PC
      * e recarrega o card atual (na pergunta), para nao revisar com dados antigos.
      */
+    override fun rafaelSincronizarPeloBotao() = rafaelSincronizarNaRevisao(manual = true)
+
     private fun rafaelSincronizarNaRevisao(manual: Boolean = false) {
         launchCatchingTask {
             val intervalo = sharedPrefs().getString("rafaelAutoSyncInterval", null)

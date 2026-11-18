@@ -505,6 +505,11 @@ abstract class AbstractFlashcardViewer :
         // intentionally blank
     }
 
+    /** AnkiDroid Rafael: acao do botao de sincronizar da barra lateral; a tela de revisao implementa */
+    protected open fun rafaelSincronizarPeloBotao() {
+        // intentionally blank
+    }
+
     /** Called after an undo or undoable operation takes place. * Should set currentCard to the current card to display. */
     open suspend fun updateCurrentCard() {
         // Legacy tests assume the current card will be grabbed from the collection,
@@ -1070,12 +1075,34 @@ abstract class AbstractFlashcardViewer :
                     }
                 val paramsVoltar =
                     LinearLayout
-                        .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (56 * densidade).toInt())
-                        .apply { bottomMargin = (6 * densidade).toInt() }
+                        .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (48 * densidade).toInt())
+                        .apply { bottomMargin = (4 * densidade).toInt() }
                 answerArea.addView(
                     botaoVoltar,
                     answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
                     paramsVoltar,
+                )
+                // botao de sincronizar, logo abaixo do de voltar
+                val botaoSincronizar =
+                    android.widget.ImageView(this).apply {
+                        setImageResource(R.drawable.ic_sync)
+                        setColorFilter(android.graphics.Color.WHITE)
+                        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
+                        setBackgroundColor(
+                            com.google.android.material.color.MaterialColors
+                                .getColor(this@AbstractFlashcardViewer, R.attr.showAnswerColor, 0),
+                        )
+                        contentDescription = "Sincronizar"
+                        val margem = (3 * densidade).toInt()
+                        setPadding(margem, margem, margem, margem)
+                        setOnClickListener { rafaelSincronizarPeloBotao() }
+                    }
+                answerArea.addView(
+                    botaoSincronizar,
+                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
+                    LinearLayout
+                        .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (48 * densidade).toInt())
+                        .apply { bottomMargin = (6 * densidade).toInt() },
                 )
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
                     LinearLayout.LayoutParams(
