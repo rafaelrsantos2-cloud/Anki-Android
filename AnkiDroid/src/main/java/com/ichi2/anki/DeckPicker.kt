@@ -1569,7 +1569,10 @@ open class DeckPicker :
      * @param runInBackground whether the sync should be performed in the background or not
      * @return whether a sync was performed or not.
      */
-    private suspend fun automaticSync(runInBackground: Boolean = false): Boolean {
+    private suspend fun automaticSync(
+        runInBackground: Boolean = false,
+        ignoreInterval: Boolean = false,
+    ): Boolean {
         /**
          * @return whether there are collection changes to sync, or null if the collection is closed.
          *
@@ -1607,7 +1610,7 @@ open class DeckPicker :
             rafaelAutoSyncIntervalMs() == 0L -> Timber.d("autoSync: intervalo = nao sincronizar")
             MeteredSyncPolicy.shouldBlock() -> Timber.d("autoSync: blocked by metered connection")
             !NetworkUtils.isOnline -> Timber.d("autoSync: offline")
-            !runInBackground && !syncIntervalPassed() -> Timber.d("autoSync: interval not passed")
+            !runInBackground && !ignoreInterval && !syncIntervalPassed() -> Timber.d("autoSync: interval not passed")
             !isLoggedIn() -> Timber.d("autoSync: not logged in")
             else -> {
                 // Startup may have failed to open the collection. Do not sync on exit in that case.
@@ -1660,10 +1663,18 @@ open class DeckPicker :
         rafaelAutoSyncLoopStarted = true
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                // ao voltar para a lista de baralhos (ou para o app), sincroniza logo, sem esperar o intervalo
+                var primeiraVez = true
                 while (true) {
-                    kotlinx.coroutines.delay(15_000L)
+                    kotlinx.coroutines.delay(if (primeiraVez) 3_000L else 15_000L)
                     try {
-                        automaticSync()
+                        val agora = TimeManager.time.intTimeMS()
+                        val semEsperar =
+                            primeiraVez &&
+                                (agora - rafaelLastAutoSyncStartMs) > 60_000L &&
+                                (agora - Prefs.lastSyncTime) > 60_000L
+                        primeiraVez = false
+                        automaticSync(ignoreInterval = semEsperar)
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {

@@ -378,6 +378,7 @@ open class AnkiDroidApp :
                 AppLifecycleObserver(applicationContext).also { observer ->
                     ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
                 }
+            RafaelBackgroundSync.register()
         }
 
     /**
