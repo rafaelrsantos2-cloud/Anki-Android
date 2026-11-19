@@ -508,11 +508,6 @@ abstract class AbstractFlashcardViewer :
     /** AnkiDroid Rafael: botao de sincronizar da barra lateral (nulo com a barra em cima ou embaixo) */
     protected var rafaelBotaoSincronizarLateral: android.widget.ImageView? = null
 
-    /** AnkiDroid Rafael: acao do botao Corrigir este card da barra lateral; a tela de revisao implementa */
-    protected open fun rafaelCorrigirPeloBotao() {
-        // intentionally blank
-    }
-
     /** AnkiDroid Rafael: acao do botao de sincronizar da barra lateral; a tela de revisao implementa */
     protected open fun rafaelSincronizarPeloBotao() {
         // intentionally blank
@@ -1085,27 +1080,6 @@ abstract class AbstractFlashcardViewer :
                     LinearLayout
                         .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (48 * densidade).toInt())
                         .apply { bottomMargin = (4 * densidade).toInt() }
-                // botao "Corrigir este card" (bandeira 7 + anotacao), acima do voltar e do sincronizar
-                val botaoCorrigir =
-                    android.widget.ImageView(this).apply {
-                        setImageResource(R.drawable.ic_flag_purple)
-                        scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-                        setBackgroundColor(
-                            com.google.android.material.color.MaterialColors
-                                .getColor(this@AbstractFlashcardViewer, R.attr.showAnswerColor, 0),
-                        )
-                        contentDescription = "Corrigir este card"
-                        val margem = (3 * densidade).toInt()
-                        setPadding(margem, margem, margem, margem)
-                        setOnClickListener { rafaelCorrigirPeloBotao() }
-                    }
-                answerArea.addView(
-                    botaoCorrigir,
-                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
-                    LinearLayout
-                        .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (48 * densidade).toInt())
-                        .apply { bottomMargin = (4 * densidade).toInt() },
-                )
                 answerArea.addView(
                     botaoVoltar,
                     answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),

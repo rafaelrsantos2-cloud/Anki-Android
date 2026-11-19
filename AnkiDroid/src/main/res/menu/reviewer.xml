@@ -19,6 +19,11 @@
         android:title="Sincronizar"
         ankidroid:showAsAction="always"/>
     <item
+        android:id="@+id/action_corrigir_card"
+        android:icon="@drawable/ic_rafael_corrigir"
+        android:title="Corrigir este card"
+        ankidroid:showAsAction="always"/>
+    <item
         android:id="@+id/action_redo"
         android:enabled="false"
         android:icon="@drawable/ic_redo"
@@ -110,11 +115,6 @@
         android:id="@+id/action_rafael_toggle_answer_buttons"
         android:title="Posi&#231;&#227;o dos bot&#245;es de resposta"
         ankidroid:showAsAction="never"/>
-    <item
-        android:id="@+id/action_corrigir_card"
-        android:icon="@drawable/ic_flag_purple"
-        android:title="Corrigir este card"
-        ankidroid:showAsAction="ifRoom"/>
     <item
         android:id="@+id/action_edit"
         android:icon="@drawable/ic_mode_edit_white"
