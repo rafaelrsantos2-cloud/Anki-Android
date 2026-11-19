@@ -348,6 +348,8 @@ open class Reviewer :
 
     override fun rafaelSincronizarPeloBotao() = rafaelSincronizarNaRevisao(manual = true)
 
+    override fun rafaelCorrigirPeloBotao() = showCorrigirCardDialog()
+
     private fun rafaelSincronizarNaRevisao(manual: Boolean = false) {
         launchCatchingTask {
             val intervalo = sharedPrefs().getString("rafaelAutoSyncInterval", null)
