@@ -1085,7 +1085,7 @@ abstract class AbstractFlashcardViewer :
                     answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
                     paramsVoltar,
                 )
-                // botao de sincronizar, logo abaixo do de voltar
+                // botao de sincronizar
                 val botaoSincronizar =
                     android.widget.ImageView(this).apply {
                         setImageResource(R.drawable.ic_sync)
@@ -1101,12 +1101,13 @@ abstract class AbstractFlashcardViewer :
                         setOnClickListener { rafaelSincronizarPeloBotao() }
                     }
                 rafaelBotaoSincronizarLateral = botaoSincronizar
+                // fica abaixo dos botoes de resposta: voltar em cima, respostas no meio, sincronizar embaixo
                 answerArea.addView(
                     botaoSincronizar,
-                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
+                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)) + 1,
                     LinearLayout
                         .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (48 * densidade).toInt())
-                        .apply { bottomMargin = (6 * densidade).toInt() },
+                        .apply { topMargin = (4 * densidade).toInt() },
                 )
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
                     LinearLayout.LayoutParams(
