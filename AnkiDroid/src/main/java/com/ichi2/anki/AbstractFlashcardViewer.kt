@@ -1060,7 +1060,8 @@ abstract class AbstractFlashcardViewer :
                 answerAreaParams.width = (30 * resources.displayMetrics.density).toInt()
                 answerAreaParams.height = ViewGroup.LayoutParams.MATCH_PARENT
                 // os botoes ocupam so o meio da coluna (4 x 76dp), ao alcance do polegar
-                answerArea.gravity = android.view.Gravity.CENTER_VERTICAL
+                // a posicao vertical do bloco e dada pelo espaco acima dele (ver aplicarPosicao)
+                answerArea.gravity = android.view.Gravity.TOP
                 // botao de desfazer (voltar ao card anterior) no topo do bloco de botoes
                 val densidade = resources.displayMetrics.density
                 val botaoVoltar =
@@ -1079,10 +1080,11 @@ abstract class AbstractFlashcardViewer :
                 val paramsVoltar =
                     LinearLayout
                         .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (48 * densidade).toInt())
-                        .apply { bottomMargin = (4 * densidade).toInt() }
+                        .apply { topMargin = (4 * densidade).toInt() }
+                // voltar e sincronizar ficam abaixo dos botoes de resposta
                 answerArea.addView(
                     botaoVoltar,
-                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
+                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)) + 1,
                     paramsVoltar,
                 )
                 // botao de sincronizar
@@ -1104,11 +1106,86 @@ abstract class AbstractFlashcardViewer :
                 // fica abaixo dos botoes de resposta: voltar em cima, respostas no meio, sincronizar embaixo
                 answerArea.addView(
                     botaoSincronizar,
-                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)) + 1,
+                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)) + 2,
                     LinearLayout
                         .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (48 * densidade).toInt())
                         .apply { topMargin = (4 * densidade).toInt() },
                 )
+                // alca para arrastar o bloco para cima e para baixo; a posicao fica gravada
+                val alca =
+                    android.widget.TextView(this).apply {
+                        text = "\u2261"
+                        gravity = android.view.Gravity.CENTER
+                        setTextColor(android.graphics.Color.WHITE)
+                        setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 18f)
+                        setBackgroundColor(
+                            com.google.android.material.color.MaterialColors
+                                .getColor(this@AbstractFlashcardViewer, R.attr.showAnswerColor, 0),
+                        )
+                        contentDescription = "Mover a barra de respostas"
+                    }
+                answerArea.addView(
+                    alca,
+                    answerArea.indexOfChild(findViewById<View>(R.id.answer_options_layout)),
+                    LinearLayout
+                        .LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (32 * densidade).toInt())
+                        .apply { bottomMargin = (4 * densidade).toInt() },
+                )
+                val prefsBarra = sharedPrefs()
+                var arrastando = false
+
+                // espaco vertical que sobra na coluna, fora o bloco (alca + respostas + voltar + sincronizar)
+                fun espacoLivre(): Int {
+                    var bloco = 0
+                    for (filho in answerArea.children) {
+                        if (filho.visibility == View.GONE) continue
+                        val lp = filho.layoutParams as LinearLayout.LayoutParams
+                        bloco += filho.height + lp.topMargin + lp.bottomMargin
+                    }
+                    return (answerArea.height - answerArea.paddingBottom - bloco).coerceAtLeast(0)
+                }
+
+                fun moverPara(topo: Int) {
+                    if (answerArea.paddingTop != topo) {
+                        answerArea.setPadding(answerArea.paddingLeft, topo, answerArea.paddingRight, answerArea.paddingBottom)
+                    }
+                }
+
+                // 0 = encostado em cima, 1 = encostado embaixo; padrao um pouco acima do centro
+                fun aplicarPosicao() {
+                    if (arrastando) return
+                    val fracao = prefsBarra.getFloat("rafaelBarraLateralPosicao", 0.35f).coerceIn(0f, 1f)
+                    moverPara((espacoLivre() * fracao).toInt())
+                }
+                answerArea.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> answerArea.post { aplicarPosicao() } }
+                answerArea.post { aplicarPosicao() }
+                var toqueInicialY = 0f
+                var topoInicial = 0
+                alca.setOnTouchListener { _, evento ->
+                    when (evento.actionMasked) {
+                        android.view.MotionEvent.ACTION_DOWN -> {
+                            arrastando = true
+                            toqueInicialY = evento.rawY
+                            topoInicial = answerArea.paddingTop
+                        }
+                        android.view.MotionEvent.ACTION_MOVE -> {
+                            moverPara((topoInicial + (evento.rawY - toqueInicialY)).toInt().coerceIn(0, espacoLivre()))
+                        }
+                        android.view.MotionEvent.ACTION_UP,
+                        android.view.MotionEvent.ACTION_CANCEL,
+                        -> {
+                            val livre = espacoLivre()
+                            if (livre > 0) {
+                                prefsBarra
+                                    .edit()
+                                    .putFloat("rafaelBarraLateralPosicao", answerArea.paddingTop.toFloat() / livre)
+                                    .apply()
+                            }
+                            arrastando = false
+                        }
+                    }
+                    true
+                }
                 findViewById<View>(R.id.answer_options_layout).layoutParams =
                     LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
