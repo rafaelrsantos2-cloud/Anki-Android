@@ -2671,6 +2671,20 @@ abstract class AbstractFlashcardViewer :
         // We play sounds through these links when a user taps the sound icon.
         @NeedsTest("integration test with typechangetext")
         fun filterUrl(url: String): Boolean {
+            // AnkiDroid Rafael: toque no cid mostrado no card copia "cid:N" para a area de transferencia
+            if (url.startsWith("signal:rafael_copiar:")) {
+                val texto = android.net.Uri.decode(url.removePrefix("signal:rafael_copiar:"))
+                val clipboard =
+                    getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("cid", texto))
+                // do Android 13 em diante o proprio sistema mostra o aviso de "copiado"
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    android.widget.Toast
+                        .makeText(this@AbstractFlashcardViewer, "Copiado: $texto", android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                }
+                return true
+            }
             if (url.startsWith("playsound:")) {
                 launchCatchingTask {
                     controlMedia(url)
@@ -2882,6 +2896,25 @@ abstract class AbstractFlashcardViewer :
             // onPageFinished will be called multiple times if the WebView redirects by setting window.location.href
             onPageFinishedCallback?.onPageFinished(view)
             view.loadUrl("javascript:onPageFinished();")
+            // AnkiDroid Rafael: torna clicavel a linha do cid (elemento #cidself dos modelos de card)
+            view.evaluateJavascript(
+                """
+                (function () {
+                    if (window.__rafaelCid) { return; }
+                    window.__rafaelCid = true;
+                    document.addEventListener('click', function (e) {
+                        var el = e.target && e.target.closest ? e.target.closest('#cidself') : null;
+                        if (!el) { return; }
+                        var texto = (el.textContent || '').trim();
+                        if (texto.indexOf('cid:') !== 0) { return; }
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.location.href = 'signal:rafael_copiar:' + encodeURIComponent(texto);
+                    }, true);
+                })();
+                """.trimIndent(),
+                null,
+            )
             // focus keyboard automatically only when if it has inputTag and focus set to true
             val autoFocus = typeAnswer!!.useInputTag && typeAnswer!!.autoFocus
             if (autoFocus) {
