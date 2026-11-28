@@ -109,7 +109,18 @@
         <activity
             android:name="com.ichi2.anki.ui.windows.managespace.ManageSpaceActivity"
             android:exported="true"/>
+        <!-- AnkiDroid Rafael: link do Caderno de Metas que monta o baralho filtrado e abre a revisao -->
         <activity
+            android:name="com.ichi2.anki.RafaelFiltroActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="ankirafael" android:host="filtro" />
+            </intent-filter>
+        </activity>        <activity
             android:name="com.ichi2.anki.IntentHandler"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
